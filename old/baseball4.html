@@ -1,0 +1,270 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>投籃大賽</title>
+    <!-- 載入bs5 css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
+        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        img {
+            width: 100%;
+            height: 60vh;
+        }
+
+        button {
+            width: 20%;
+        }
+
+        canvas {
+            background: #eee;
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: 200px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        /* 蓄力條樣式 */
+        #powerBarContainer {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            margin-top: 10px;
+            border-radius: 10px;
+        }
+
+        #powerBar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, orange, red);
+            border-radius: 10px;
+            transition: width 0.1s linear;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-2">
+                <span id="timer">60</span>
+            </div>
+            <div class="col-8 text-center">
+                <h3>投籃大賽</h3>
+            </div>
+            <div class="col-2">
+                <span>最高分數: <span id="highScore">0</span></span>
+            </div>
+        </div>
+        <hr />
+    </div>
+
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col-2">
+                <img src="./images/ball_left.png" alt="左球" />
+            </div>
+            <div class="col-8 text-center">
+                <!-- Canvas -->
+                <canvas id="gameCanvas" width="480" height="200"></canvas>
+                <div>得分: <span id="score">0</span></div>
+                <!-- 蓄力條 -->
+                <div id="powerBarContainer">
+                    <div id="powerBar"></div>
+                </div>
+            </div>
+            <div class="col-2">
+                <img src="./images/ball.png" alt="右球" />
+            </div>
+        </div>
+        <hr />
+    </div>
+
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col text-center">
+                <button id="startBtn" type="button" class="btn btn-primary me-3">開始</button>
+                <button id="stopBtn" type="button" class="btn btn-danger">停止</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入bs5 js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"
+        integrity="sha512-Tc0i+vRogmX4NN7tuLbQfBxa8JkfUSAxSFVzmU31nVdHyiHElPPy2cWfFacmCJKw0VqovrzKhdd2TSTMdAxp2g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- 載入jquery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        $(document).ready(function () {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreEl = $('#score');
+            const highScoreEl = $('#highScore');
+            const powerBar = $('#powerBar');
+
+            let ball = {
+                x: 50,
+                y: 180,
+                radius: 10,
+                vx: 0,
+                vy: 0,
+                gravity: 0.4,
+                isMoving: false
+            };
+
+            let hoop = {
+                x: 400,
+                y: 140,
+                width: 50,
+                height: 10
+            };
+
+            let score = 0;
+            let highScore = 0;
+            let animationId;
+            let gameRunning = false;
+
+            // 蓄力時間 (毫秒)
+            let keyDownTime = 0;
+            // 用來更新蓄力條的interval
+            let powerBarTimer;
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 畫球
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'orange';
+                ctx.fill();
+                ctx.closePath();
+
+                // 畫籃框
+                ctx.beginPath();
+                ctx.rect(hoop.x, hoop.y, hoop.width, hoop.height);
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.closePath();
+            }
+
+            function update() {
+                if (ball.isMoving) {
+                    ball.x += ball.vx;
+                    ball.y += ball.vy;
+                    ball.vy += ball.gravity;
+
+                    // 判斷是否進籃 (球中心進入籃框矩形區)
+                    if (
+                        ball.x > hoop.x &&
+                        ball.x < hoop.x + hoop.width &&
+                        ball.y > hoop.y &&
+                        ball.y < hoop.y + hoop.height
+                    ) {
+                        score++;
+                        scoreEl.text(score);
+                        if (score > highScore) {
+                            highScore = score;
+                            highScoreEl.text(highScore);
+                        }
+                        ball.isMoving = false;
+                        resetBall();
+                    }
+
+                    // 球落地或出界重設
+                    if (ball.y > canvas.height || ball.x > canvas.width) {
+                        ball.isMoving = false;
+                        resetBall();
+                    }
+                }
+            }
+
+            function resetBall() {
+                ball.x = 50;
+                ball.y = 180;
+                ball.vx = 0;
+                ball.vy = 0;
+                draw();
+            }
+
+            function gameLoop() {
+                if (!gameRunning) return;
+                update();
+                draw();
+                animationId = requestAnimationFrame(gameLoop);
+            }
+
+            // 按開始鍵
+            $('#startBtn').click(function () {
+                if (gameRunning) return;
+                gameRunning = true;
+                score = 0;
+                scoreEl.text(score);
+                resetBall();
+                gameLoop();
+            });
+
+            // 按停止鍵
+            $('#stopBtn').click(function () {
+                gameRunning = false;
+                cancelAnimationFrame(animationId);
+                resetBall();
+                powerBar.css('width', '0%');
+            });
+
+            // 空白鍵按下開始蓄力
+            $(document).keydown(function (e) {
+                if (!gameRunning) return;
+                if (e.code === 'Space' && !ball.isMoving && keyDownTime === 0) {
+                    keyDownTime = Date.now();
+                    powerBar.css('width', '0%');
+
+                    // 每50ms更新一次蓄力條寬度
+                    powerBarTimer = setInterval(() => {
+                        let holdTime = Date.now() - keyDownTime;
+                        let maxHoldTime = 2000; // 2秒蓄滿
+                        let ratio = Math.min(holdTime / maxHoldTime, 1);
+                        powerBar.css('width', (ratio * 100) + '%');
+                    }, 50);
+                }
+            });
+
+            // 空白鍵放開投球，初速度依蓄力時間動態決定
+            $(document).keyup(function (e) {
+                if (!gameRunning) return;
+                if (e.code === 'Space' && !ball.isMoving && keyDownTime !== 0) {
+                    let pressDuration = Date.now() - keyDownTime;
+                    keyDownTime = 0;
+                    clearInterval(powerBarTimer);
+                    powerBar.css('width', '0%');
+
+                    const maxHoldTime = 2000; // 2秒最大蓄力
+                    let ratio = Math.min(pressDuration / maxHoldTime, 1);
+
+                    // 根據蓄力比例設定速度 (可自己調整)
+                    ball.vx = 3 + 9 * ratio;     // 水平速度 3~12
+                    ball.vy = -6 - 14 * ratio;   // 垂直速度 -6 ~ -20 (負向上)
+
+                    ball.isMoving = true;
+                }
+            });
+
+            // 首次先畫球與籃框
+            draw();
+        });
+    </script>
+</body>
+
+</html>
+

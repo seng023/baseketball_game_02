@@ -1,0 +1,274 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>投籃大賽（響應式手機版）</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+  img {
+    width: 100%;
+    height: 60vh;
+  }
+  button {
+    width: 20%;
+  }
+  canvas {
+    background: #eee;
+    border: 1px solid #ccc;
+    max-width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  #powerBarContainer {
+    width: 100%;
+    height: 20px;
+    background: #ddd;
+    margin-top: 10px;
+    border-radius: 10px;
+  }
+  #powerBar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, orange, red);
+    border-radius: 10px;
+    transition: width 0.1s linear;
+  }
+  /* 讓按鈕在小螢幕適當 margin */
+  @media (max-width: 576px) {
+    button {
+      width: 40%;
+      margin-bottom: 10px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="row align-items-center">
+    <div class="col-2 text-center fw-bold fs-4" id="timer" style="user-select:none;">60</div>
+    <div class="col-8 text-center">
+      <h3>投籃大賽</h3>
+    </div>
+    <div class="col-2 text-center fw-bold">
+      最高分數: <span id="highScore">0</span>
+    </div>
+  </div>
+  <hr />
+</div>
+
+<div class="container mt-3">
+  <div class="row">
+    <div class="col-2 d-none d-md-block"><img src="./images/ball_left.png" alt="左球" /></div>
+    <div class="col-12 col-md-8 text-center">
+      <canvas id="gameCanvas"></canvas>
+      <div class="mt-2 fs-5">得分: <span id="score">0</span></div>
+      <div id="powerBarContainer">
+        <div id="powerBar"></div>
+      </div>
+    </div>
+    <div class="col-2 d-none d-md-block"><img src="./images/ball.png" alt="右球" /></div>
+  </div>
+  <hr />
+</div>
+
+<div class="container mt-3">
+  <div class="row">
+    <div class="col text-center">
+      <button id="startBtn" class="btn btn-primary me-3">開始</button>
+      <button id="stopBtn" class="btn btn-danger">停止</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+$(function () {
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = $('#score');
+  const highScoreEl = $('#highScore');
+  const timerEl = $('#timer');
+  const powerBar = $('#powerBar');
+
+  // 設定canvas寬高比例，依主容器寬度調整
+  function resizeCanvas() {
+    const containerWidth = $('#gameCanvas').parent().width();
+    canvas.style.width = containerWidth + 'px';
+    canvas.style.height = (containerWidth * 200 / 480) + 'px';
+    // canvas屬性設定像素大小，確保畫面清晰
+    canvas.width = containerWidth;
+    canvas.height = containerWidth * 200 / 480;
+  }
+  resizeCanvas();
+  $(window).resize(resizeCanvas);
+
+  let ball = { x: 50, y: 180, radius: 10, vx: 0, vy: 0, gravity: 0.4, isMoving: false };
+  let hoop = { x: 400, y: 140, width: 50, height: 10 };
+
+  let score = 0;
+  let highScore = 0;
+  let animationId;
+  let gameRunning = false;
+
+  let keyDownTime = 0;
+  let powerBarTimer;
+
+  const totalTime = 60;
+  let timeLeft = totalTime;
+  let countdownTimerId;
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // 球 (比例需要調整，因為canvas大小動態變化，將球、籃框座標乘以縮放比)
+    const scaleX = canvas.width / 480;
+    const scaleY = canvas.height / 200;
+
+    ctx.beginPath();
+    ctx.arc(ball.x * scaleX, ball.y * scaleY, ball.radius * scaleX, 0, Math.PI * 2);
+    ctx.fillStyle = 'orange';
+    ctx.fill();
+    ctx.closePath();
+
+    ctx.beginPath();
+    ctx.rect(hoop.x * scaleX, hoop.y * scaleY, hoop.width * scaleX, hoop.height * scaleY);
+    ctx.strokeStyle = 'red';
+    ctx.lineWidth = 3 * ((scaleX + scaleY) / 2); // 線寬跟比例變化調整
+    ctx.stroke();
+    ctx.closePath();
+  }
+
+  function update() {
+    if (ball.isMoving) {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
+      ball.vy += ball.gravity;
+
+      // 判定是否進籃（以原始座標判斷）
+      if (
+        ball.x > hoop.x &&
+        ball.x < hoop.x + hoop.width &&
+        ball.y > hoop.y &&
+        ball.y < hoop.y + hoop.height
+      ) {
+        // 泡分數依剩餘時間給分
+        let point = (timeLeft > 30) ? 1 : 2;
+        score += point;
+        scoreEl.text(score);
+        if (score > highScore) {
+          highScore = score;
+          highScoreEl.text(highScore);
+        }
+        ball.isMoving = false;
+        resetBall();
+      }
+
+      // 球出界或落地重設
+      if (ball.y > 200 || ball.x > 480) {
+        ball.isMoving = false;
+        resetBall();
+      }
+    }
+  }
+
+  function resetBall() {
+    ball.x = 50;
+    ball.y = 180;
+    ball.vx = 0;
+    ball.vy = 0;
+    draw();
+  }
+
+  function gameLoop() {
+    if (!gameRunning) return;
+    update();
+    draw();
+    animationId = requestAnimationFrame(gameLoop);
+  }
+
+  function startCountdown() {
+    timeLeft = totalTime;
+    timerEl.text(timeLeft);
+    countdownTimerId = setInterval(() => {
+      if (timeLeft <= 0) {
+        clearInterval(countdownTimerId);
+        gameOver();
+        return;
+      }
+      timeLeft--;
+      timerEl.text(timeLeft);
+    }, 1000);
+  }
+
+  function gameOver() {
+    gameRunning = false;
+    ball.isMoving = false;
+    cancelAnimationFrame(animationId);
+    alert(`時間到！你的分數是 ${score} 分。`);
+  }
+
+  $('#startBtn').click(() => {
+    if (gameRunning) return;
+    gameRunning = true;
+    score = 0;
+    scoreEl.text(score);
+    resetBall();
+    startCountdown();
+    gameLoop();
+  });
+
+  $('#stopBtn').click(() => {
+    gameRunning = false;
+    clearInterval(countdownTimerId);
+    timerEl.text(totalTime);
+    cancelAnimationFrame(animationId);
+    resetBall();
+    powerBar.css('width', '0%');
+  });
+
+  // 蓄力開始
+  $(document).keydown((e) => {
+    if (!gameRunning) return;
+    // 不在移動中且尚未蓄力，且時間還沒結束
+    if (e.code === 'Space' && !ball.isMoving && keyDownTime === 0 && timeLeft > 0) {
+      keyDownTime = Date.now();
+      powerBar.css('width', '0%');
+      powerBarTimer = setInterval(() => {
+        let holdTime = Date.now() - keyDownTime;
+        let maxHoldTime = 2000;
+        let ratio = Math.min(holdTime / maxHoldTime, 1);
+        powerBar.css('width', (ratio * 100) + '%');
+      }, 50);
+    }
+  });
+
+  // 蓄力結束，投籃
+  $(document).keyup((e) => {
+    if (!gameRunning) return;
+    if (e.code === 'Space' && !ball.isMoving && keyDownTime !== 0 && timeLeft > 0) {
+      let pressDuration = Date.now() - keyDownTime;
+      keyDownTime = 0;
+      clearInterval(powerBarTimer);
+      powerBar.css('width', '0%');
+
+      const maxHoldTime = 2000;
+      let ratio = Math.min(pressDuration / maxHoldTime, 1);
+
+      ball.vx = 3 + 9 * ratio;
+      ball.vy = -6 - 14 * ratio;
+
+      ball.isMoving = true;
+    }
+  });
+
+  // 頁面首次載入先畫一次
+  draw();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>投籃大賽</title>
+    <!-- 載入 Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
+        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        img {
+            width: 100%;
+            height: 60vh;
+        }
+
+        button {
+            width: 20%;
+        }
+
+        .hide-btn {
+            display: none !important;
+        }
+
+        .show-btn {
+            display: inline-block !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-2 text-center fw-bold fs-4"><span id="timer">60</span></div>
+            <div class="col-8 text-center">
+                投籃大賽
+                <hr />
+            </div>
+            <div class="col-2 text-center fw-bold">最高分數: <span id="highScore">0</span></div>
+        </div>
+    </div>
+
+    <div class="container mt-3">
+        <div class="row align-items-center">
+            <div class="col-2">
+                <img src="./images/ball_left.png" alt="左球" />
+            </div>
+            <div class="col-8 text-center fs-3">
+                分數：<span id="score">0</span>
+            </div>
+            <div class="col-2">
+                <img src="./images/ball.png" alt="右球" />
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-3">
+        <hr />
+        <div class="row">
+            <div class="col text-center">
+                <button id="startBtn" type="button" class="btn btn-primary class-btn me-3 show-btn">開始</button>
+                <button id="shotBtn" type="button" class="btn btn-success class-btn me-3 hide-btn">投籃</button>
+                <button id="stopBtn" type="button" class="btn btn-danger class-btn">停止</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 Bootstrap 5 JS 與 jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"
+        integrity="sha512-Tc0i+vRogmX4NN7tuLbQfBxa8JkfUSAxSFVzmU31nVdHyiHElPPy2cWfFacmCJKw0VqovrzKhdd2TSTMdAxp2g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        $(function () {
+            let score = 0;
+            let highScore = 0;
+
+            const startBtn = $('#startBtn');
+            const shotBtn = $('#shotBtn');
+            const stopBtn = $('#stopBtn');
+            const scoreSpan = $('#score');
+            const highScoreSpan = $('#highScore');
+
+            // 頁面載入時投籃按鈕隱藏，開始按鈕顯示
+            startBtn.addClass('show-btn').removeClass('hide-btn');
+            shotBtn.addClass('hide-btn').removeClass('show-btn');
+
+            // 點擊開始按鈕
+            startBtn.on('click', function () {
+                // 隱藏開始，顯示投籃
+                startBtn.addClass('hide-btn').removeClass('show-btn');
+                shotBtn.addClass('show-btn').removeClass('hide-btn');
+            });
+
+            // 點擊投籃按鈕加分
+            shotBtn.on('click', function () {
+                score += 2;
+                scoreSpan.text(score);
+
+                if(score > highScore){
+                    highScore = score;
+                    highScoreSpan.text(highScore);
+                }
+            });
+
+            // 點擊停止按鈕分數歸零，按鈕狀態回復
+            stopBtn.on('click', function () {
+                score = 0;
+                scoreSpan.text(score);
+
+                // 顯示開始隱藏投籃
+                startBtn.addClass('show-btn').removeClass('hide-btn');
+                shotBtn.addClass('hide-btn').removeClass('show-btn');
+            });
+        });
+    </script>
+</body>
+
+</html>

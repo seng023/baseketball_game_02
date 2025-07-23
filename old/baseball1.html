@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>投籃大賽</title>
+    <!-- 載入bs5 css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css"
+        integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        img {
+            width: 100%;
+            height: 60vh;
+        }
+
+        button {
+            width: 20%;
+        }
+
+        canvas {
+            background: #eee;
+            border: 1px solid #ccc;
+            max-width: 100%;
+            height: 200px;
+            display: block;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-2">
+                <span id="timer">60</span>
+            </div>
+            <div class="col-8 text-center">
+                <h3>投籃大賽</h3>
+            </div>
+            <div class="col-2">
+                <span>最高分數: <span id="highScore">0</span></span>
+            </div>
+        </div>
+        <hr />
+    </div>
+
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col-2">
+                <img src="./images/ball_left.png" alt="左球" />
+            </div>
+            <div class="col-8 text-center">
+               <!-- 這裡放canvas -->
+                <canvas id="gameCanvas" width="480" height="200"></canvas>
+                <div>得分: <span id="score">0</span></div>
+            </div>
+            <div class="col-2">
+                <img src="./images/ball.png" alt="右球" />
+            </div>
+        </div>
+        <hr />
+    </div>
+
+    <div class="container mt-3">
+        <div class="row">
+            <div class="col text-center">
+                <button id="startBtn" type="button" class="btn btn-primary me-3">開始</button>
+                <button id="stopBtn" type="button" class="btn btn-danger">停止</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 載入bs5 js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"
+        integrity="sha512-Tc0i+vRogmX4NN7tuLbQfBxa8JkfUSAxSFVzmU31nVdHyiHElPPy2cWfFacmCJKw0VqovrzKhdd2TSTMdAxp2g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <!-- 載入jquery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+        $(document).ready(function () {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const scoreEl = $('#score');
+            const highScoreEl = $('#highScore');
+            const timerEl = $('#timer');
+
+            let ball = {
+                x: 50,
+                y: 180,
+                radius: 10,
+                vx: 0,
+                vy: 0,
+                gravity: 0.4,
+                isMoving: false
+            };
+
+            // 篮框的位置（用矩形表示）
+            let hoop = {
+                x: 400,
+                y: 140,
+                width: 50,
+                height: 10
+            };
+
+            let score = 0;
+            let highScore = 0;
+            let animationId;
+            let gameRunning = false;
+
+            // 清空畫面並繪製球和籃框
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // 畫球
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+                ctx.fillStyle = 'orange';
+                ctx.fill();
+                ctx.closePath();
+
+                // 畫籃框(矩形)
+                ctx.beginPath();
+                ctx.rect(hoop.x, hoop.y, hoop.width, hoop.height);
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+                ctx.closePath();
+            }
+
+            // 更新球的位置
+            function update() {
+                if (ball.isMoving) {
+                    ball.x += ball.vx;
+                    ball.y += ball.vy;
+                    ball.vy += ball.gravity; // 模擬重力加速度
+
+                    // 判斷球是否進籃 (簡單射入籃框矩形範圍內)
+                    if (
+                        ball.x > hoop.x &&
+                        ball.x < hoop.x + hoop.width &&
+                        ball.y > hoop.y &&
+                        ball.y < hoop.y + hoop.height
+                    ) {
+                        score++;
+                        scoreEl.text(score);
+                        ball.isMoving = false;
+                        resetBall();
+                    }
+
+                    // 球飛出範圍 或 落地重設
+                    if (ball.y > canvas.height) {
+                        ball.isMoving = false;
+                        resetBall();
+                    }
+                }
+            }
+
+            // 重設球的位置
+            function resetBall() {
+                ball.x = 50;
+                ball.y = 180;
+                ball.vx = 0;
+                ball.vy = 0;
+            }
+
+            // 遊戲循環
+            function gameLoop() {
+                if (!gameRunning) return;
+                update();
+                draw();
+                animationId = requestAnimationFrame(gameLoop);
+            }
+
+            // 按開始按鈕
+            $('#startBtn').click(function () {
+                if (gameRunning) return;
+                gameRunning = true;
+                score = 0;
+                scoreEl.text(score);
+                resetBall();
+                gameLoop();
+            });
+
+            // 按停止按鈕
+            $('#stopBtn').click(function () {
+                gameRunning = false;
+                cancelAnimationFrame(animationId);
+                resetBall();
+                draw();
+            });
+
+           
+
+let keyDownTime = 0;
+
+$(document).keydown(function (e) {
+    if (!gameRunning) return;
+    if (e.code === 'Space' && !ball.isMoving && keyDownTime === 1) {
+        keyDownTime = Date.now(); // 紀錄按鍵按下時間
+    }
+});
+
+$(document).keyup(function (e) {
+    if (!gameRunning) return;
+    if (e.code === 'Space' && !ball.isMoving && keyDownTime !== 0) {
+        let pressDuration = Date.now() - keyDownTime; // 持續毫秒數
+        keyDownTime = 0;
+
+        // 根據持續時間算速度（可調整比例與最大速度）
+        let maxPress = 2000; // 最大按壓時間2秒，超過以此為限
+        let ratio = Math.min(pressDuration / maxPress, 1);
+
+        // 初速度範圍例如 vx: 3 ~ 12, vy: -6 ~ -20
+        ball.vx = 3 + ratio * 9; // 水平速度隨時間增大
+        ball.vy = -6 - ratio * 14; // 垂直速度隨時間增大（負號代表向上）
+
+        ball.isMoving = true;
+    }
+});
+
+   
+
+
+            // 按空白鍵發射球（也可以改用其他方式）
+            $(document).keydown(function (e) {
+                if (!gameRunning) return;
+                if (!ball.isMoving && e.code === 'Space') {
+                    // 投擲的初速度與方向（X向右，Y向上）
+                    ball.vx = 7;
+                    ball.vy = -10;
+                    ball.isMoving = true;
+                }
+            });
+
+            // 初始化先畫靜止球和籃框
+            draw();
+        });
+    </script>
+</body>
+
+</html>
