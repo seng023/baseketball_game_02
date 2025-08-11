@@ -1,0 +1,323 @@
+<!DOCTYPE html>  <!-- 宣告文件類型為 HTML5 -->
+<html lang="zh-TW">  <!-- 設定語言為繁體中文（台灣） -->
+<head>  <!-- head 區開始 -->
+  <meta charset="UTF-8" />  <!-- 設定文檔字元編碼為 UTF-8 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />  <!-- 響應式視窗設定 -->
+  <title>投籃大賽</title>  <!-- 頁面標題 -->
+
+  <!-- Bootstrap -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha512-fw7f+TcMjTb7bpbLJZlP8g2Y4XcCyFZW8uy8HsRZsH/SwbMw0plKHFHr99DN3l04VsYNwvzicUX/6qurvIxbxw=="
+    crossorigin="anonymous" referrerpolicy="no-referrer" />  <!-- 引入 Bootstrap CSS CDN，包含資源完整性與跨域設定 -->
+
+  <style>  /* 內嵌 CSS 開始 */
+    body {  /* 設定 body 樣式 */
+      margin: 10px;  /* 外距 10px */
+      font-family: Arial, sans-serif;  /* 字型設定 */
+    }
+
+    #gameCanvas {  /* Canvas 畫布樣式 */
+      background: #eee;  /* 淺灰背景色 */
+      border: 1px solid #ccc;  /* 灰色邊框 */
+      display: block;  /* 區塊顯示，有助於置中 */
+      margin: 10px auto;  /* 上下 10px，左右置中 */
+      width: 100%;  /* 寬度為容器全寬 */
+      max-width: 400px;  /* 最大寬度限制 400px */
+      height: auto;  /* 高度自動 */
+    }
+
+    #powerBarContainer {  /* 力量條容器 */
+      width: 100%;  /* 寬度滿容器 */
+      max-width: 400px;  /* 最大寬度 400px */
+      height: 20px;  /* 高度 20px */
+      background: #ddd;  /* 容器背景色 */
+      border-radius: 10px;  /* 圓角 */
+      margin: 0 auto 10px;  /* 置中及下面間距10px */
+    }
+
+    #powerBar {  /* 力量條本體 */
+      height: 100%;  /* 高度填滿容器 */
+      width: 0%;  /* 初始寬度 0% */
+      background: linear-gradient(90deg, orange, red);  /* 漸層顏色 */
+      border-radius: 10px;  /* 圓角 */
+      transition: width 0.1s linear;  /* 寬度變化時的過渡動畫 */
+    }
+
+    button {  /* 所有按鈕 */
+      width: 160px;  /* 固定寬度 */
+      font-size: 16px;  /* 文字大小 */
+    }
+
+    #buttonContainer {  /* 按鈕容器 */
+      display: flex;  /* 使用 Flexbox */
+      justify-content: center;  /* 水平置中 */
+      gap: 20px;  /* 按鈕間距 20px */
+      max-width: 400px;  /* 最大寬度 400px */
+      margin: 20px auto 30px;  /* 上間距20px，下間距30px，左右置中 */
+    }
+
+    #scoreboard,  /* 多個元素共用樣式 */
+    #timer,
+    #highScore {
+      text-align: center;  /* 文字置中 */
+      font-weight: bold;  /* 粗體字 */
+      font-size: 18px;  /* 字型大小 */
+      max-width: 400px;  /* 最大寬度 */
+      margin: auto;  /* 置中 */
+    }
+
+    img.img-fluid {  /* Bootstrap 響應式圖片樣式 */
+      max-width: 100%;  /* 最大寬度 100% */
+      height: auto;  /* 高度自動，保持比例 */
+      display: block;  /* 區塊元素，避免下方空白 */
+    }
+  </style>  <!-- 內嵌 CSS 結束 -->
+</head>  <!-- head 區結束 -->
+<body>  <!-- body 區開始 -->
+
+  <div class="container">  <!-- bootstrap 容器 -->
+    <div class="row align-items-center mb-2">  <!-- bootstrap 行，垂直置中，下方間距 -->
+      <div class="col-2 text-center fw-bold fs-4"><span id="timer">時間:30</span></div>  <!-- 左側時間 -->
+      <div class="col-8 text-center fs-4">投籃大賽<hr /></div>  <!-- 中間標題與線 -->
+      <div class="col-2 text-center fw-bold fs-5">最高分數: <span id="highScore">0</span></div>  <!-- 右側最高分 -->
+    </div>
+  </div>
+
+  <div class="container">  <!-- 另一個 bootstrap 容器 -->
+    <div class="row align-items-center">  <!-- 行，垂直置中 -->
+      <div class="col-2">  <!-- 左側欄位 -->
+        <img src="./images/ball_left.png" alt="左球" class="img-fluid" />  <!-- 裝飾圖片 -->
+        <img src="./images/ba2.png" alt="球2" class="img-fluid" />  <!-- 裝飾圖片 -->
+      </div>
+      <div class="col-8 text-center">  <!-- 中間遊戲區 -->
+        <canvas id="gameCanvas" width="480" height="200"></canvas>  <!-- HTML5 畫布，預設邏輯大小 -->
+        <div id="powerBarContainer"><div id="powerBar"></div></div>  <!-- 力量條及容器 -->
+        <div class="mt-2 fs-5">得分：<span id="score">0</span></div>  <!-- 分數展示 -->
+      </div>
+      <div class="col-2">  <!-- 右側欄位 -->
+        <img src="./images/ball.png" alt="球3" class="img-fluid" />  <!-- 裝飾圖片 -->
+        <img src="./images/ba1.png" alt="球4" class="img-fluid" />  <!-- 裝飾圖片 -->
+        <img src="./images/ba3.png" alt="球5" class="img-fluid" />  <!-- 裝飾圖片 -->
+      </div>
+    </div>
+  </div>
+
+  <div id="buttonContainer">  <!-- 按鈕容器 -->
+    <button id="actionBtn" class="btn btn-primary">開始</button>  <!-- 開始/投籃按鈕 -->
+    <button id="stopBtn" class="btn btn-danger">停止</button>  <!-- 停止按鈕 -->
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.7/js/bootstrap.bundle.min.js"
+    integrity="sha512-Tc0i+vRogmX4NN7tuLbQfBxa8JkfUSAxSFVzmU31nVdHyiHElPPy2cWfFacmCJKw0VqovrzKhdd2TSTMdAxp2g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>  <!-- Bootstrap JS CDN -->
+
+  <!-- jQuery -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+    integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+    crossorigin="anonymous" referrerpolicy="no-referrer"></script>  <!-- jQuery CDN -->
+
+  <!-- 遊戲邏輯 -->
+  <script>
+    $(function () {  // DOM 載入完成後執行
+      const $canvas = $('#gameCanvas');  // jQuery選取canvas元素
+      const canvas = $canvas[0];  // 取得原生canvas DOM元素
+      const ctx = canvas.getContext('2d');  // 繪圖上下文2D
+      const $powerBar = $('#powerBar');  // 力量條元素
+      const $timerEl = $('#timer');  // 時間顯示元素
+      const $scoreEl = $('#score');  // 得分顯示元素
+      const $highScoreEl = $('#highScore');  // 最高分
+      const $actionBtn = $('#actionBtn');  // 主要操作按鈕（開始/投籃）
+      const $stopBtn = $('#stopBtn');  // 停止按鈕
+
+      const LOGIC_WIDTH = 480;  // Canvas邏輯寬度
+      const LOGIC_HEIGHT = 200;  // Canvas邏輯高度
+
+      let ball = { x: 50, y: 180, radius: 15, vx: 0, vy: 0, gravity: 0.4, isMoving: false };  // 球物件與物理參數
+      const hoop = { x: 400, y: 140, width: 50, height: 10 };  // 籃框位置與尺寸
+
+      let score = 0;  // 當前分數
+      let highScore = 0;  // 最高分
+      let gameRunning = false;  // 遊戲是否進行中
+      let animationId = null;  // requestAnimationFrame返回值
+      let countdownTimerId = null;  // 倒數計時器ID
+      const TOTAL_TIME = 30;  // 遊戲總時間秒數
+      let timeLeft = TOTAL_TIME;  // 剩餘時間
+      let keyDownTime = 0;  // 按鍵按下開始時間（毫秒時間戳）
+      let powerBarTimer = null;  // 力量條定時器ID
+
+      canvas.addEventListener('contextmenu', e => e.preventDefault());  // 禁用canvas右鍵選單
+      $(window).on('contextmenu', e => e.preventDefault());  // 全局禁用右鍵選單
+
+      function getScale() {  // 計算canvas實際大小與邏輯大小縮放比
+        return {
+          scaleX: canvas.clientWidth / LOGIC_WIDTH,
+          scaleY: canvas.clientHeight / LOGIC_HEIGHT
+        };
+      }
+
+      function draw() {  // 繪製球和籃框
+        ctx.clearRect(0, 0, LOGIC_WIDTH, LOGIC_HEIGHT);  // 清除整個畫布
+        const { scaleX, scaleY } = getScale();
+
+        ctx.save();
+        ctx.scale(scaleX, scaleY);  // 縮放繪圖座標
+
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);  // 畫球
+        ctx.fillStyle = 'orange';
+        ctx.fill();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.rect(hoop.x, hoop.y, hoop.width, hoop.height);  // 畫籃框
+        ctx.strokeStyle = 'red';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.closePath();
+
+        ctx.restore();
+      }
+
+      function update() {  // 更新球的位置和狀態
+        if (!ball.isMoving) return;  // 球若未移動則跳過更新
+
+        ball.x += ball.vx;  // 根據速度改變位置
+        ball.y += ball.vy;
+        ball.vy += ball.gravity;  // 加入重力加速度
+
+        if (
+          ball.x > hoop.x &&
+          ball.x < hoop.x + hoop.width &&
+          ball.y > hoop.y &&
+          ball.y < hoop.y + hoop.height
+        ) {  // 球中心進入籃框矩形視為投中
+          const point = timeLeft > 10 ? 1 : 2;  // 遊戲前半段得1分，後半段得2分
+          score += point;
+          $scoreEl.text(score);
+          if (score > highScore) {
+            highScore = score;
+            $highScoreEl.text(highScore);
+          }
+          resetBall();
+          ball.isMoving = false;
+        }
+
+        if (ball.y > LOGIC_HEIGHT || ball.x > LOGIC_WIDTH) {  // 球超出畫面則重置
+          resetBall();
+          ball.isMoving = false;
+        }
+      }
+
+      function resetBall() {  // 重置球初始位置並繪圖
+        ball.x = 50;
+        ball.y = 180;
+        ball.vx = 0;
+        ball.vy = 0;
+        draw();
+      }
+
+      function gameLoop() {  // 主遊戲迴圈，持續更新畫面和狀態
+        if (!gameRunning) return;
+        update();
+        draw();
+        animationId = requestAnimationFrame(gameLoop);
+      }
+
+      function startCountdown() {  // 開始倒數計時
+        timeLeft = TOTAL_TIME;
+        $timerEl.text(`時間：${timeLeft}`);
+        countdownTimerId = setInterval(() => {
+          if (timeLeft <= 0) {
+            clearInterval(countdownTimerId);
+            gameOver();
+            return;
+          }
+          timeLeft--;
+          $timerEl.text(`時間：${timeLeft}`);
+        }, 1000);
+      }
+
+      function gameOver() {  // 遊戲結束，停止所有動作並顯示分數
+        gameRunning = false;
+        ball.isMoving = false;
+        cancelAnimationFrame(animationId);
+        alert(`時間到！你的分數是 ${score} 分。`);
+        resetBall();
+        $powerBar.css('width', '0%');
+        keyDownTime = 0;
+        $actionBtn.text('開始');
+
+        $actionBtn.off();
+        $actionBtn.on('click', startGame);
+      }
+
+      function startGame() {  // 按下開始按鈕初始化遊戲
+        if (gameRunning) return;
+
+        gameRunning = true;
+        score = 0;
+        $scoreEl.text(score);
+        resetBall();
+        startCountdown();
+        gameLoop();
+        $actionBtn.text('投籃');
+
+        $actionBtn.off();
+        $actionBtn.on('mousedown touchstart', startPower);  // 按下累積力量
+        $actionBtn.on('mouseup touchend touchcancel mouseleave', shootBall);  // 放開發射
+      }
+
+      function startPower(e) {  // 累積投籃力量
+        e.preventDefault();
+        if (!gameRunning || ball.isMoving || keyDownTime !== 0 || timeLeft <= 0) return;
+
+        keyDownTime = Date.now();
+        $powerBar.css('width', '0%');
+
+        powerBarTimer = setInterval(() => {
+          const elapsed = Date.now() - keyDownTime;
+          const maxHold = 2000;
+          const ratio = Math.min(elapsed / maxHold, 1);
+          $powerBar.css('width', (ratio * 100) + '%');  // 力量條隨時間增長
+        }, 50);
+      }
+
+      function shootBall(e) {  // 放開按鈕投籃
+        e.preventDefault();
+        if (!gameRunning || ball.isMoving || keyDownTime === 0 || timeLeft <= 0) return;
+
+        clearInterval(powerBarTimer);
+        $powerBar.css('width', '0%');
+
+        const pressDuration = Date.now() - keyDownTime;
+        keyDownTime = 0;
+        const maxHold = 2000;
+        const ratio = Math.min(pressDuration / maxHold, 1);
+
+        ball.vx = 3 + 9 * ratio;  // 水平速度依力量比例增加
+        ball.vy = -6 - 14 * ratio;  // 垂直速度依力量比例增加，負號表示向上
+        ball.isMoving = true;
+      }
+
+      $stopBtn.on('click', () => {  // 停止遊戲按鈕
+        gameRunning = false;
+        clearInterval(countdownTimerId);
+        $timerEl.text(`時間：${TOTAL_TIME}`);
+        cancelAnimationFrame(animationId);
+        resetBall();
+        $powerBar.css('width', '0%');
+        keyDownTime = 0;
+        $actionBtn.text('開始');
+
+        $actionBtn.off();
+        $actionBtn.on('click', startGame);
+      });
+
+      resetBall();  // 初始化畫面繪製
+      $actionBtn.on('click', startGame);  // 綁定開始按鈕事件
+    });
+  </script>
+
+</body>
+</html>
